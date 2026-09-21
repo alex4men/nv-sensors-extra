@@ -16,7 +16,6 @@
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/pci.h>
-#include <linux/slab.h>
 #include <linux/string.h>
 
 #include "nv_sensors_extra.h"
