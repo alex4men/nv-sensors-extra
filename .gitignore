@@ -1,0 +1,9 @@
+# Out-of-tree kbuild artifacts (only appear if make is run inside this dir)
+*.o
+*.ko
+*.ko.zst
+*.mod
+*.mod.c
+.*.cmd
+modules.order
+Module.symvers
