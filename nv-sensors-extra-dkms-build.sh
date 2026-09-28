@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PKG_NAME="nv-sensors-extra"
-PKG_VERSION="1.0"
+PKG_VERSION="1.2"
 MOD_NAME="nv-sensors-extra"
 # Source directory: this repository by default; override with SRC_DIR=...
 SRC_DIR="${SRC_DIR:-$(cd "$(dirname "$0")" && pwd)}"

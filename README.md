@@ -1,8 +1,8 @@
 # nv-sensors-extra — extra GPU sensors as a kernel hwmon driver
 
 A Linux kernel module that reads the **GDDR6/GDDR6X memory junction
-temperature** and the **GPU hotspot temperature** from supported NVIDIA
-GPUs and exports them
+temperature**, the **GPU hotspot temperature** and the **GPU core
+temperature** from supported NVIDIA GPUs and exports them
 through the standard `hwmon` interface, so any tool that reads hwmon
 (`sensors`, libhwmon, `lm-sensors`, monitoring daemons, etc.) can use
 them.
@@ -44,16 +44,42 @@ upstream `master` is intentionally not ported.
 - For each detected card it maps the BAR0 register space of the GPU and
   reads the memory-temperature register directly, decoding it to Celsius.
 - Multi-GPU: every supported card gets its own hwmon device named
-  `nv_sensors_extra` with two sensors:
-  - `temp1` — memory junction (GDDR6 memory) temperature, in millidegrees
-    Celsius
-  - `temp2` — GPU hotspot temperature, in millidegrees Celsius
+  `nv_sensors_extra` with three sensors, all reported in millidegrees
+  Celsius:
+  - `temp1` — GPU core temperature (the "GPU current temperature" that
+    nvidia-smi reports), 1/256 °C resolution
+  - `temp2` — GPU hotspot temperature, 1/256 °C resolution
+  - `temp3` — memory junction (GDDR6 memory) temperature, 1/32 °C
+    resolution (in practice the firmware quantizes the value to whole
+    even degrees)
 - The `temp*_label` files carry the GPU name and the sensor name, e.g.
-  `RTX 3090 memory junction temperature` and
-  `RTX 3090 GPU hotspot temperature`.
+  `RTX 3090 GPU core temperature`,
+  `RTX 3090 GPU hotspot temperature` and
+  `RTX 3090 memory junction temperature`.
 
 The only supported scenario is running **alongside** the proprietary
 NVIDIA driver: a GPU that is not bound to `nvidia` is ignored.
+
+### Calibration (no offset is applied by the module)
+
+The module reports **raw sensor values** and deliberately applies no
+calibration. Measured against `nvidia-smi` on a GA102 (RTX 3090), the raw
+`temp1` reading sits about **+2 °C** above the NVML `temperature.gpu`
+value over the 27..42 °C range. The exact offset is per-die /
+per-architecture — measure it on your own card (see `RESEARCH.md` for the
+method) and apply it in userspace, not in the module.
+
+The standard way is the lm-sensors offset. Create
+`/etc/sensors.d/nv-sensors-extra`:
+
+```
+chip "nv_sensors_extra"
+temp1 offset -2
+```
+
+The offset is in whole degrees Celsius and applies to every card with the
+`nv_sensors_extra` hwmon name (same for `temp2`/`temp3` if you ever need
+it for them).
 
 ## Requirements (Debian/Ubuntu)
 
@@ -97,8 +123,8 @@ sudo ./nv-sensors-extra-dkms-install.sh  # dkms install
 
 ```sh
 sudo dkms add /path/to/this/repo
-sudo dkms build -m nv-sensors-extra -v 1.0
-sudo dkms install -m nv-sensors-extra -v 1.0
+sudo dkms build -m nv-sensors-extra -v 1.2
+sudo dkms install -m nv-sensors-extra -v 1.2
 ```
 
 ### Load the module
@@ -121,8 +147,9 @@ echo nv-sensors-extra | sudo tee /etc/modules-load.d/nv-sensors-extra.conf
 ```sh
 sensors                          # should show an nv_sensors_extra section
 # or, directly:
-cat /sys/class/hwmon/hwmon*/temp1_input   # memory junction, millidegrees C
+cat /sys/class/hwmon/hwmon*/temp1_input   # GPU core, millidegrees C
 cat /sys/class/hwmon/hwmon*/temp2_input   # GPU hotspot, millidegrees C
+cat /sys/class/hwmon/hwmon*/temp3_input   # memory junction, millidegrees C
 cat /sys/class/hwmon/hwmon*/temp1_label
 ```
 
@@ -133,7 +160,7 @@ that the GPU is bound to it (`lspci -k`), and `dmesg` for driver messages.
 
 ```sh
 sudo rmmod nv-sensors-extra
-sudo dkms remove nv-sensors-extra/1.0
+sudo dkms remove nv-sensors-extra/1.2
 sudo rm -f /etc/modules-load.d/nv-sensors-extra.conf
 ```
 
@@ -147,10 +174,10 @@ RTX A2000 (2x), RTX A4000, RTX A4500, RTX A5000, RTX 6000 Ada Generation,
 L4, L40S, A10
 
 The table can be extended in `nv_sensors_extra_drv.c`
-(`nv_sensors_extra_dev_table`) for any Ada/Ampere card whose VRAM/hotspot
-register offsets are known.
+(`nv_sensors_extra_dev_table`) for any Ada/Ampere card whose VRAM/hotspot/
+core register offsets are known.
 
 ## Versioning
 
 `PACKAGE_VERSION` in `dkms.conf` is the release identifier DKMS keys on —
-bump it for new releases (`1.0` → `1.1`, …).
+bump it for new releases (`1.1` → `1.2`, …).

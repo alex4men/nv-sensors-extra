@@ -4,7 +4,7 @@
 set -euo pipefail
 
 PKG_NAME="nv-sensors-extra"
-PKG_VERSION="1.0"
+PKG_VERSION="1.2"
 MOD_NAME="nv-sensors-extra"
 KERNEL="${1:-$(uname -r)}"
 

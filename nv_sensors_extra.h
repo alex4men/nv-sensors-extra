@@ -3,8 +3,8 @@
 /*
  * nv_sensors_extra.h - internal declarations for the NVIDIA GDDR6 hwmon driver
  *
- * Reads GDDR6/GDDR6X memory and GPU hotspot temperatures from the PCI
- * BAR0 of supported NVIDIA GPUs. The GPU itself is owned by the
+ * Reads GDDR6/GDDR6X memory, GPU hotspot and GPU core temperatures from
+ * the PCI BAR0 of supported NVIDIA GPUs. The GPU itself is owned by the
  * proprietary nvidia driver.
  */
 
@@ -18,6 +18,7 @@ struct nv_sensors_extra_entry {
 	u16 device_id;
 	u32 vram_offset;
 	u32 hotspot_offset;
+	u32 core_offset;
 	const char *name;
 	const char *vram;
 	const char *arch;
@@ -48,6 +49,16 @@ long nv_sensors_extra_vram_temp(u32 raw);
  * value (device in deep sleep, all zero or all one bits).
  */
 long nv_sensors_extra_hotspot_temp(u32 raw);
+
+/*
+ * nv_sensors_extra_core_temp() - convert a raw GPU core (die) sensor
+ * register value to millidegrees Celsius
+ *
+ * Return: temperature in millidegrees, or -ENODATA if @raw is an invalid
+ * value (device in deep sleep, all zero or all one bits) or the sensor
+ * availability flags are not set.
+ */
+long nv_sensors_extra_core_temp(u32 raw);
 
 /*
  * nv_sensors_extra_bound_to_nvidia() - check whether @pdev is bound to the

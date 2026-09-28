@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 
 /*
- * nv_sensors_extra_drv.c - hwmon driver for NVIDIA GDDR6/GDDR6X memory and GPU
- * hotspot temperatures
+ * nv_sensors_extra_drv.c - hwmon driver for NVIDIA GDDR6/GDDR6X memory, GPU
+ * hotspot and GPU core temperatures
  *
  * Sensor values are read directly from PCI BAR0 of the GPU. This driver
  * does NOT register a PCI driver and does NOT take ownership of the
@@ -26,38 +26,38 @@
 /*
  * Device table: offsets of the sensor registers in BAR0.
  *
- * The GPU hotspot sensor sits at the same offset for all supported
- * chips. The VRAM sensor lives at 0x0000E2A8 on every chip except the
- * GA104-based RTX 3070 cards, which use 0x0000EE50.
+ * The GPU hotspot and GPU core sensors sit at the same offsets for all
+ * supported chips. The VRAM sensor lives at 0x0000E2A8 on every chip
+ * except the GA104-based RTX 3070 cards, which use 0x0000EE50.
  */
 static const struct nv_sensors_extra_entry nv_sensors_extra_dev_table[] = {
-	{ 0x2684, 0x0000E2A8, 0x0002046C, "RTX 4090", "GDDR6X", "AD102" },
-	{ 0x2685, 0x0000E2A8, 0x0002046C, "RTX 4090 D", "GDDR6X", "AD102" },
-	{ 0x2702, 0x0000E2A8, 0x0002046C, "RTX 4080 Super", "GDDR6X", "AD103" },
-	{ 0x2704, 0x0000E2A8, 0x0002046C, "RTX 4080", "GDDR6X", "AD103" },
-	{ 0x2705, 0x0000E2A8, 0x0002046C, "RTX 4070 Ti Super", "GDDR6X", "AD103" },
-	{ 0x2782, 0x0000E2A8, 0x0002046C, "RTX 4070 Ti", "GDDR6X", "AD104" },
-	{ 0x2783, 0x0000E2A8, 0x0002046C, "RTX 4070 Super", "GDDR6X", "AD104" },
-	{ 0x2786, 0x0000E2A8, 0x0002046C, "RTX 4070", "GDDR6X", "AD104" },
-	{ 0x2860, 0x0000E2A8, 0x0002046C, "RTX 4070 Max-Q / Mobile", "GDDR6", "AD106" },
-	{ 0x28e0, 0x0000E2A8, 0x0002046C, "RTX 4060 Max-Q / Mobile", "GDDR6", "AD107" },
-	{ 0x28a0, 0x0000E2A8, 0x0002046C, "RTX 4060 Laptop", "GDDR6", "AD107" },
-	{ 0x2203, 0x0000E2A8, 0x0002046C, "RTX 3090 Ti", "GDDR6X", "GA102" },
-	{ 0x2204, 0x0000E2A8, 0x0002046C, "RTX 3090", "GDDR6X", "GA102" },
-	{ 0x2208, 0x0000E2A8, 0x0002046C, "RTX 3080 Ti", "GDDR6X", "GA102" },
-	{ 0x2206, 0x0000E2A8, 0x0002046C, "RTX 3080", "GDDR6X", "GA102" },
-	{ 0x2216, 0x0000E2A8, 0x0002046C, "RTX 3080 LHR", "GDDR6X", "GA102" },
-	{ 0x2484, 0x0000EE50, 0x0002046C, "RTX 3070", "GDDR6", "GA104" },
-	{ 0x2488, 0x0000EE50, 0x0002046C, "RTX 3070 LHR", "GDDR6", "GA104" },
-	{ 0x2531, 0x0000E2A8, 0x0002046C, "RTX A2000", "GDDR6", "GA106" },
-	{ 0x2571, 0x0000E2A8, 0x0002046C, "RTX A2000", "GDDR6", "GA106" },
-	{ 0x24b0, 0x0000E2A8, 0x0002046C, "RTX A4000", "GDDR6", "GA104" },
-	{ 0x2232, 0x0000E2A8, 0x0002046C, "RTX A4500", "GDDR6", "GA102" },
-	{ 0x2231, 0x0000E2A8, 0x0002046C, "RTX A5000", "GDDR6", "GA102" },
-	{ 0x26B1, 0x0000E2A8, 0x0002046C, "RTX 6000 Ada Generation", "GDDR6", "AD102" },
-	{ 0x27B8, 0x0000E2A8, 0x0002046C, "L4", "GDDR6", "AD104" },
-	{ 0x26B9, 0x0000E2A8, 0x0002046C, "L40S", "GDDR6", "AD102" },
-	{ 0x2236, 0x0000E2A8, 0x0002046C, "A10", "GDDR6", "GA102" },
+	{ 0x2684, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4090", "GDDR6X", "AD102" },
+	{ 0x2685, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4090 D", "GDDR6X", "AD102" },
+	{ 0x2702, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4080 Super", "GDDR6X", "AD103" },
+	{ 0x2704, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4080", "GDDR6X", "AD103" },
+	{ 0x2705, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4070 Ti Super", "GDDR6X", "AD103" },
+	{ 0x2782, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4070 Ti", "GDDR6X", "AD104" },
+	{ 0x2783, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4070 Super", "GDDR6X", "AD104" },
+	{ 0x2786, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4070", "GDDR6X", "AD104" },
+	{ 0x2860, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4070 Max-Q / Mobile", "GDDR6", "AD106" },
+	{ 0x28e0, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4060 Max-Q / Mobile", "GDDR6", "AD107" },
+	{ 0x28a0, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 4060 Laptop", "GDDR6", "AD107" },
+	{ 0x2203, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 3090 Ti", "GDDR6X", "GA102" },
+	{ 0x2204, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 3090", "GDDR6X", "GA102" },
+	{ 0x2208, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 3080 Ti", "GDDR6X", "GA102" },
+	{ 0x2206, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 3080", "GDDR6X", "GA102" },
+	{ 0x2216, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 3080 LHR", "GDDR6X", "GA102" },
+	{ 0x2484, 0x0000EE50, 0x0002046C, 0x00020460, "RTX 3070", "GDDR6", "GA104" },
+	{ 0x2488, 0x0000EE50, 0x0002046C, 0x00020460, "RTX 3070 LHR", "GDDR6", "GA104" },
+	{ 0x2531, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX A2000", "GDDR6", "GA106" },
+	{ 0x2571, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX A2000", "GDDR6", "GA106" },
+	{ 0x24b0, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX A4000", "GDDR6", "GA104" },
+	{ 0x2232, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX A4500", "GDDR6", "GA102" },
+	{ 0x2231, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX A5000", "GDDR6", "GA102" },
+	{ 0x26B1, 0x0000E2A8, 0x0002046C, 0x00020460, "RTX 6000 Ada Generation", "GDDR6", "AD102" },
+	{ 0x27B8, 0x0000E2A8, 0x0002046C, 0x00020460, "L4", "GDDR6", "AD104" },
+	{ 0x26B9, 0x0000E2A8, 0x0002046C, 0x00020460, "L40S", "GDDR6", "AD102" },
+	{ 0x2236, 0x0000E2A8, 0x0002046C, 0x00020460, "A10", "GDDR6", "GA102" },
 };
 
 /*
@@ -72,6 +72,7 @@ struct nv_sensors_extra_priv {
 	struct device *hwdev;
 	char label1[64];
 	char label2[64];
+	char label3[64];
 };
 
 static struct nv_sensors_extra_priv nv_sensors_extra_privs[NV_SENSORS_EXTRA_MAX_DEVICES];
@@ -98,7 +99,7 @@ long nv_sensors_extra_vram_temp(u32 raw)
 	 * VRAM temperature in degrees Celsius is encoded in the low 12
 	 * bits of the register with 1/32 degree resolution.
 	 */
-	return ((long)(raw & 0x00000FFFU) / 0x20U) * 1000;
+	return ((long)(raw & 0x00000FFFU) * 1000) / 32;
 }
 
 long nv_sensors_extra_hotspot_temp(u32 raw)
@@ -106,8 +107,42 @@ long nv_sensors_extra_hotspot_temp(u32 raw)
 	if (raw == 0x00000000U || raw == 0xFFFFFFFFU)
 		return -ENODATA;
 
-	/* GPU hotspot temperature in degrees Celsius is in bits 8-15. */
-	return (long)((raw >> 8) & 0xFFU) * 1000;
+	/*
+	 * 16-bit fixed point: bits [15:8] are integer degrees Celsius and the
+	 * low byte is the fraction (1/256 degree Celsius per LSB). Available
+	 * if the primary sensor flag (bit 29) or the shadow sensor flag
+	 * (bit 30) is set; under the proprietary driver (GSP-RM) the
+	 * firmware populates the shadow sensors, so bit 29 stays clear.
+	 */
+	if (!(raw & (0x20000000U | 0x40000000U)))
+		return -ENODATA;
+
+	return (long)((raw & 0x0001FFF8U) >> 8) * 1000 +
+	       (long)((raw & 0xFFU) * 1000) / 256;
+}
+
+long nv_sensors_extra_core_temp(u32 raw)
+{
+	if (raw == 0x00000000U || raw == 0xFFFFFFFFU)
+		return -ENODATA;
+
+	/*
+	 * The reading is available if the primary sensor flag (bit 29) or the
+	 * shadow sensor flag (bit 30) is set. Under the proprietary driver
+	 * (GSP-RM) the firmware populates the shadow sensors, so bit 29 stays
+	 * clear.
+	 *
+	 * 16-bit fixed point: bits [15:8] are integer degrees Celsius and the
+	 * low byte is the fraction (1/256 degree Celsius per LSB). No
+	 * calibration is applied here: the raw reading runs a couple of
+	 * degrees above the NVML value, see the README for adjusting it
+	 * through the lm-sensors offset.
+	 */
+	if (!(raw & (0x20000000U | 0x40000000U)))
+		return -ENODATA;
+
+	return (long)((raw & 0x0001FFF8U) >> 8) * 1000 +
+	       (long)((raw & 0xFFU) * 1000) / 256;
 }
 
 bool nv_sensors_extra_bound_to_nvidia(const struct pci_dev *pdev)
@@ -125,7 +160,7 @@ static umode_t nv_sensors_extra_hwmon_visible(const void *drvdata,
 	 */
 	if (type == hwmon_temp &&
 	    (attr == hwmon_temp_input || attr == hwmon_temp_label) &&
-	    channel >= 0 && channel <= 1)
+	    channel >= 0 && channel <= 2)
 		return 0444;
 
 	return 0;
@@ -144,12 +179,16 @@ static int nv_sensors_extra_hwmon_read(struct device *dev,
 
 	switch (channel) {
 	case 0:
-		raw = readl(priv->base + priv->entry->vram_offset);
-		temp = nv_sensors_extra_vram_temp(raw);
+		raw = readl(priv->base + priv->entry->core_offset);
+		temp = nv_sensors_extra_core_temp(raw);
 		break;
 	case 1:
 		raw = readl(priv->base + priv->entry->hotspot_offset);
 		temp = nv_sensors_extra_hotspot_temp(raw);
+		break;
+	case 2:
+		raw = readl(priv->base + priv->entry->vram_offset);
+		temp = nv_sensors_extra_vram_temp(raw);
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -179,6 +218,9 @@ static int nv_sensors_extra_hwmon_read_string(struct device *dev,
 	case 1:
 		*str = priv->label2;
 		break;
+	case 2:
+		*str = priv->label3;
+		break;
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -187,17 +229,19 @@ static int nv_sensors_extra_hwmon_read_string(struct device *dev,
 }
 
 /*
- * Two temperature channels, each with an input and a label:
- *   channel 1 - memory junction temperature
+ * Three temperature channels, each with an input and a label:
+ *   channel 1 - GPU core temperature
  *   channel 2 - GPU hotspot temperature
+ *   channel 3 - memory junction temperature
  *
  * Every element of config[] is the attribute mask of one channel (the
  * array is terminated by 0) and channel numbering restarts for every
- * hwmon_channel_info entry, so both channels must be described inside a
+ * hwmon_channel_info entry, so all channels must be described inside a
  * single HWMON_CHANNEL_INFO() entry.
  */
 static const struct hwmon_channel_info * const nv_sensors_extra_info[] = {
 	HWMON_CHANNEL_INFO(temp, HWMON_T_INPUT | HWMON_T_LABEL,
+			       HWMON_T_INPUT | HWMON_T_LABEL,
 			       HWMON_T_INPUT | HWMON_T_LABEL),
 	NULL,
 };
@@ -243,9 +287,11 @@ static int nv_sensors_extra_add_gpu(struct pci_dev *pdev,
 	priv->entry = entry;
 
 	snprintf(priv->label1, sizeof(priv->label1),
-		 "%s memory junction temperature", entry->name);
+		 "%s GPU core temperature", entry->name);
 	snprintf(priv->label2, sizeof(priv->label2),
 		 "%s GPU hotspot temperature", entry->name);
+	snprintf(priv->label3, sizeof(priv->label3),
+		 "%s memory junction temperature", entry->name);
 
 	hwdev = hwmon_device_register_with_info(&pdev->dev,
 						NV_SENSORS_EXTRA_HWMON_NAME, priv,
@@ -259,8 +305,9 @@ static int nv_sensors_extra_add_gpu(struct pci_dev *pdev,
 	nv_sensors_extra_num_privs++;
 
 	pr_info("%s: %s (%s, %s) registered: "
-		"temp1 = memory junction temperature, "
-		"temp2 = GPU hotspot temperature\n",
+		"temp1 = GPU core temperature, "
+		"temp2 = GPU hotspot temperature, "
+		"temp3 = memory junction temperature\n",
 		pci_name(pdev), entry->name, entry->arch, entry->vram);
 
 	return 0;
@@ -369,4 +416,4 @@ module_exit(nv_sensors_extra_exit);
 /* The GPU must be owned by the proprietary nvidia driver first. */
 MODULE_SOFTDEP("pre: nvidia");
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVIDIA GDDR6/GDDR6X memory temperature and GPU hotspot");
+MODULE_DESCRIPTION("NVIDIA GDDR6/GDDR6X memory, GPU hotspot and GPU core temperatures");
